@@ -1,0 +1,133 @@
+# Clients used to validate the egress NvSecurityRules in this directory.
+# Each Service becomes a NeuVector learned group: nv.<service>.<namespace>.
+# Apply this before the policy files. NeuVector rejects a target of nv.<service>.<namespace>
+# when that Service does not exist yet, and it deletes the NvSecurityRule.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nv-egress-deny
+  labels:
+    solera.io/policy-domain: network
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deny-domain
+  namespace: nv-egress-deny
+  labels:
+    app.kubernetes.io/name: deny-domain
+    app.kubernetes.io/part-of: nv-egress-deny
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: deny-domain
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: deny-domain
+        app.kubernetes.io/part-of: nv-egress-deny
+    spec:
+      containers:
+        - name: client
+          image: nicolaka/netshoot:latest
+          imagePullPolicy: IfNotPresent
+          command: ["sleep", "infinity"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: deny-domain
+  namespace: nv-egress-deny
+  labels:
+    app.kubernetes.io/name: deny-domain
+    app.kubernetes.io/part-of: nv-egress-deny
+spec:
+  selector:
+    app.kubernetes.io/name: deny-domain
+  ports:
+    - name: unused
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: allow-deny-domain
+  namespace: nv-egress-deny
+  labels:
+    app.kubernetes.io/name: allow-deny-domain
+    app.kubernetes.io/part-of: nv-egress-deny
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: allow-deny-domain
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: allow-deny-domain
+        app.kubernetes.io/part-of: nv-egress-deny
+    spec:
+      containers:
+        - name: client
+          image: nicolaka/netshoot:latest
+          imagePullPolicy: IfNotPresent
+          command: ["sleep", "infinity"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: allow-deny-domain
+  namespace: nv-egress-deny
+  labels:
+    app.kubernetes.io/name: allow-deny-domain
+    app.kubernetes.io/part-of: nv-egress-deny
+spec:
+  selector:
+    app.kubernetes.io/name: allow-deny-domain
+  ports:
+    - name: unused
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deny-ip-range
+  namespace: nv-egress-deny
+  labels:
+    app.kubernetes.io/name: deny-ip-range
+    app.kubernetes.io/part-of: nv-egress-deny
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: deny-ip-range
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: deny-ip-range
+        app.kubernetes.io/part-of: nv-egress-deny
+    spec:
+      containers:
+        - name: client
+          image: nicolaka/netshoot:latest
+          imagePullPolicy: IfNotPresent
+          command: ["sleep", "infinity"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: deny-ip-range
+  namespace: nv-egress-deny
+  labels:
+    app.kubernetes.io/name: deny-ip-range
+    app.kubernetes.io/part-of: nv-egress-deny
+spec:
+  selector:
+    app.kubernetes.io/name: deny-ip-range
+  ports:
+    - name: unused
+      port: 8080
+      targetPort: 8080

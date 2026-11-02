@@ -1,0 +1,74 @@
+# Allow egress to one DNS name and deny another.
+#
+# example.com (and its subdomains) is an explicit allow. example.net (and its
+# subdomains) is an explicit deny at priority 100, which NeuVector 5.6 evaluates
+# before the allow at priority 90. Priority is an integer 0-100; a higher value
+# is evaluated first. Protect mode's implicit deny blocks every other external
+# destination. UDP/TCP 53 to containers is allowed so name lookups can run.
+apiVersion: neuvector.com/v1
+kind: NvSecurityRule
+metadata:
+  name: nv.allow-deny-domain.nv-egress-deny
+  namespace: nv-egress-deny
+  labels:
+    solera.io/cluster: local
+    solera.io/policy-domain: network
+    solera.io/managed-by: git
+spec:
+  target:
+    policymode: Protect
+    selector:
+      name: nv.allow-deny-domain.nv-egress-deny
+      comment: allow example.com, deny example.net
+      criteria:
+        - key: service
+          op: "="
+          value: allow-deny-domain.nv-egress-deny
+        - key: domain
+          op: "="
+          value: nv-egress-deny
+  process_profile:
+    baseline: basic
+    mode: Monitor
+  ingress: []
+  process: []
+  file: []
+  egress:
+    - action: deny
+      name: deny-example-net
+      priority: 100
+      ports: any
+      selector:
+        name: ext-example-net
+        comment: example.net apex and subdomains
+        criteria:
+          - key: address
+            op: "="
+            value: example.net
+          - key: address
+            op: "="
+            value: "*.example.net"
+    - action: allow
+      name: allow-example-com
+      priority: 90
+      ports: any
+      selector:
+        name: ext-example-com
+        comment: example.com apex and subdomains
+        criteria:
+          - key: address
+            op: "="
+            value: example.com
+          - key: address
+            op: "="
+            value: "*.example.com"
+    - action: allow
+      name: allow-deny-allow-dns
+      priority: 40
+      ports: udp/53,tcp/53
+      selector:
+        name: containers
+        criteria:
+          - key: container
+            op: "="
+            value: "*"

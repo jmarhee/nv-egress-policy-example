@@ -1,0 +1,69 @@
+# Block egress to one DNS name. Other external destinations stay allowed.
+#
+# NeuVector matches address criteria against DNS names (and *.suffix wildcards),
+# not only against a single A record. example.org and *.example.org are OR'd.
+# On NeuVector 5.6, priority is an integer 0-100 and a higher value is evaluated
+# first. The deny is 100 so it matches before the reserved external allow.
+# Protect on the source group is what drops the connection. A deny action in
+# Monitor mode is only a violation log.
+# Cluster DNS is not part of external, so UDP/TCP 53 to containers is allowed
+# on its own.
+apiVersion: neuvector.com/v1
+kind: NvSecurityRule
+metadata:
+  name: nv.deny-domain.nv-egress-deny
+  namespace: nv-egress-deny
+  labels:
+    solera.io/cluster: local
+    solera.io/policy-domain: network
+    solera.io/managed-by: git
+spec:
+  target:
+    policymode: Protect
+    selector:
+      name: nv.deny-domain.nv-egress-deny
+      comment: clients whose egress to example.org is blocked
+      criteria:
+        - key: service
+          op: "="
+          value: deny-domain.nv-egress-deny
+        - key: domain
+          op: "="
+          value: nv-egress-deny
+  process_profile:
+    baseline: basic
+    mode: Monitor
+  ingress: []
+  process: []
+  file: []
+  egress:
+    - action: deny
+      name: deny-example-org
+      priority: 100
+      ports: any
+      selector:
+        name: ext-example-org
+        comment: example.org apex and subdomains
+        criteria:
+          - key: address
+            op: "="
+            value: example.org
+          - key: address
+            op: "="
+            value: "*.example.org"
+    - action: allow
+      name: deny-domain-allow-external
+      priority: 50
+      ports: any
+      selector:
+        name: external
+    - action: allow
+      name: deny-domain-allow-dns
+      priority: 40
+      ports: udp/53,tcp/53
+      selector:
+        name: containers
+        criteria:
+          - key: container
+            op: "="
+            value: "*"
